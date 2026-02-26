@@ -5,26 +5,28 @@ import SiteContent from "@/models/SiteContent";
 // Default content keys - auto-seeded on first GET
 const DEFAULTS = [
     // Hero Section
-    { key: "hero_title", section: "Hero", label: "Hero Title", type: "text", value: "Grand Horizon" },
-    { key: "hero_subtitle", section: "Hero", label: "Hero Subtitle", type: "text", value: "Luxury Resort & Spa" },
-    { key: "hero_tagline", section: "Hero", label: "Hero Tagline", type: "textarea", value: "Experience unparalleled luxury in the heart of paradise." },
-    { key: "hero_image", section: "Hero", label: "Hero Background Image", type: "image", value: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1920&auto=format&fit=crop" },
-    { key: "hero_cta", section: "Hero", label: "Hero Button Text", type: "text", value: "Book Your Stay" },
+    { key: "hero_eyebrow", section: "Hero", label: "Hero Eyebrow Text", type: "text", value: "EST. 2001 • PARIS" },
+    { key: "hero_title", section: "Hero", label: "Hero Headline Line 1", type: "text", value: "Where Comfort Meets" },
+    { key: "hero_subtitle", section: "Hero", label: "Hero Headline Line 2 (italic gold)", type: "text", value: "Unrivaled Luxury" },
+    { key: "hero_tagline", section: "Hero", label: "Hero Subtitle Paragraph", type: "textarea", value: "Experience a sanctuary of refined elegance in the heart of the city." },
+    { key: "hero_image", section: "Hero", label: "Hero Background Image URL", type: "image", value: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1920&auto=format&fit=crop" },
+    { key: "hero_cta", section: "Hero", label: "Hero Button Text", type: "text", value: "Reserve Your Stay" },
 
     // About Section
-    { key: "about_title", section: "About", label: "About Title", type: "text", value: "A Legacy of Luxury" },
-    { key: "about_description", section: "About", label: "About Description", type: "textarea", value: "Since our founding, Grand Horizon has been the epitome of refined hospitality." },
-    { key: "about_image", section: "About", label: "About Image", type: "image", value: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=1920&auto=format&fit=crop" },
+    { key: "about_title", section: "About", label: "About Title Line 1", type: "text", value: "A Legacy of" },
+    { key: "about_title_italic", section: "About", label: "About Title Line 2 (italic gold)", type: "text", value: "Timeless Elegance" },
+    { key: "about_description", section: "About", label: "About Description", type: "textarea", value: "Established in 2001, Grand Horizon stands as a testament to the art of hospitality. Nestled in the heart of the city's most prestigious district, we have redefined luxury for the modern traveler." },
+    { key: "about_image", section: "About", label: "About Section Image URL", type: "image", value: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=1920&auto=format&fit=crop" },
 
     // Dining Section
     { key: "dining_title", section: "Dining", label: "Dining Section Title", type: "text", value: "Culinary Excellence" },
     { key: "dining_subtitle", section: "Dining", label: "Dining Subtitle", type: "textarea", value: "Savor the extraordinary. From Michelin-starred innovation to authentic local flavors." },
-    { key: "dining_image", section: "Dining", label: "Dining Hero Image", type: "image", value: "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1920&auto=format&fit=crop" },
+    { key: "dining_image", section: "Dining", label: "Dining Hero Image URL", type: "image", value: "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1920&auto=format&fit=crop" },
 
     // Rooms Section
     { key: "rooms_title", section: "Rooms", label: "Rooms Section Title", type: "text", value: "Sanctuaries of Peace & Privacy" },
     { key: "rooms_subtitle", section: "Rooms", label: "Rooms Subtitle", type: "textarea", value: "Each retreat is designed for the discerning traveler seeking refined comfort." },
-    { key: "rooms_hero_image", section: "Rooms", label: "Rooms Hero Image", type: "image", value: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=1920&auto=format&fit=crop" },
+    { key: "rooms_hero_image", section: "Rooms", label: "Rooms Hero Image URL", type: "image", value: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=1920&auto=format&fit=crop" },
 
     // Contact
     { key: "contact_phone", section: "Contact", label: "Phone Number", type: "text", value: "+1 (888) 123-4567" },
@@ -48,20 +50,27 @@ export async function GET() {
             await SiteContent.insertMany(DEFAULTS);
             content = await SiteContent.find().sort({ section: 1, key: 1 });
         } else {
-            // Migrate any stale local /images/ paths to the Unsplash defaults
+            const existingKeys = new Set(content.map((c: any) => c.key));
+
+            // Insert any new default keys that don't yet exist in the DB
+            const missing = DEFAULTS.filter(d => !existingKeys.has(d.key));
+            if (missing.length > 0) {
+                await SiteContent.insertMany(missing);
+            }
+
+            // Migrate stale local /images/ paths to Unsplash defaults
             const defaultsMap = Object.fromEntries(DEFAULTS.map(d => [d.key, d.value]));
             const staleDocs = content.filter(
-                c => c.type === "image" && typeof c.value === "string" && c.value.startsWith("/images/")
+                (c: any) => c.type === "image" && typeof c.value === "string" && c.value.startsWith("/images/")
             );
-            if (staleDocs.length > 0) {
-                await SiteContent.bulkWrite(
-                    staleDocs.map(doc => ({
-                        updateOne: {
-                            filter: { key: doc.key },
-                            update: { value: defaultsMap[doc.key] ?? doc.value },
-                        },
-                    }))
-                );
+            if (staleDocs.length > 0 || missing.length > 0) {
+                const bulkOps = staleDocs.map((doc: any) => ({
+                    updateOne: {
+                        filter: { key: doc.key },
+                        update: { value: defaultsMap[doc.key] ?? doc.value },
+                    },
+                }));
+                if (bulkOps.length > 0) await SiteContent.bulkWrite(bulkOps);
                 content = await SiteContent.find().sort({ section: 1, key: 1 });
             }
         }
