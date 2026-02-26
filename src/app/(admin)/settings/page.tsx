@@ -26,7 +26,12 @@ export default function SettingsPage() {
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
-        fetch("/api/settings").then(r => r.json()).then(data => {
+        fetch("/api/settings")
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            })
+            .then(data => {
             if (data && !data.error) {
                 setForm({
                     restaurantName: data.restaurantName || "",
@@ -41,19 +46,25 @@ export default function SettingsPage() {
                     socialLinks: data.socialLinks || { instagram: "", facebook: "", twitter: "" },
                 });
             }
-        });
+        })
+        .catch(err => console.error("Settings fetch failed:", err));
     }, []);
 
     const handleSave = async () => {
         setSaving(true);
-        await fetch("/api/settings", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(form),
-        });
-        setSaving(false);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+        try {
+            await fetch("/api/settings", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(form),
+            });
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+        } catch (err) {
+            console.error("Settings save failed:", err);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const inputClass = "w-full bg-slate-800 border border-slate-700 text-white px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 transition-colors";

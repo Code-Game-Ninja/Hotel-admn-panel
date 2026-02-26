@@ -20,9 +20,15 @@ export default function ContentPage() {
     const [activeSection, setActiveSection] = useState("all");
 
     useEffect(() => {
-        fetch("/api/content").then(r => r.json()).then(data => {
-            if (Array.isArray(data)) setItems(data);
-        });
+        fetch("/api/content")
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            })
+            .then(data => {
+                if (Array.isArray(data)) setItems(data);
+            })
+            .catch(err => console.error("Content fetch failed:", err));
     }, []);
 
     const sections = Array.from(new Set(items.map(i => i.section)));
@@ -39,18 +45,25 @@ export default function ContentPage() {
 
     const handleSave = async () => {
         setSaving(true);
-        const updates = Object.entries(edited).map(([key, value]) => ({ key, value }));
-        const res = await fetch("/api/content", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updates),
-        });
-        const data = await res.json();
-        if (Array.isArray(data)) setItems(data);
-        setEdited({});
-        setSaving(false);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+        try {
+            const updates = Object.entries(edited).map(([key, value]) => ({ key, value }));
+            const res = await fetch("/api/content", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updates),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) setItems(data);
+            }
+            setEdited({});
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+        } catch (err) {
+            console.error("Content save failed:", err);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const typeIcon = (type: string) => {

@@ -8,23 +8,23 @@ const DEFAULTS = [
     { key: "hero_title", section: "Hero", label: "Hero Title", type: "text", value: "Grand Horizon" },
     { key: "hero_subtitle", section: "Hero", label: "Hero Subtitle", type: "text", value: "Luxury Resort & Spa" },
     { key: "hero_tagline", section: "Hero", label: "Hero Tagline", type: "textarea", value: "Experience unparalleled luxury in the heart of paradise." },
-    { key: "hero_image", section: "Hero", label: "Hero Background Image", type: "image", value: "/images/hero.jpg" },
+    { key: "hero_image", section: "Hero", label: "Hero Background Image", type: "image", value: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1920&auto=format&fit=crop" },
     { key: "hero_cta", section: "Hero", label: "Hero Button Text", type: "text", value: "Book Your Stay" },
 
     // About Section
     { key: "about_title", section: "About", label: "About Title", type: "text", value: "A Legacy of Luxury" },
     { key: "about_description", section: "About", label: "About Description", type: "textarea", value: "Since our founding, Grand Horizon has been the epitome of refined hospitality." },
-    { key: "about_image", section: "About", label: "About Image", type: "image", value: "/images/about.jpg" },
+    { key: "about_image", section: "About", label: "About Image", type: "image", value: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=1920&auto=format&fit=crop" },
 
     // Dining Section
     { key: "dining_title", section: "Dining", label: "Dining Section Title", type: "text", value: "Culinary Excellence" },
     { key: "dining_subtitle", section: "Dining", label: "Dining Subtitle", type: "textarea", value: "Savor the extraordinary. From Michelin-starred innovation to authentic local flavors." },
-    { key: "dining_image", section: "Dining", label: "Dining Hero Image", type: "image", value: "/images/dining-hero.jpg" },
+    { key: "dining_image", section: "Dining", label: "Dining Hero Image", type: "image", value: "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1920&auto=format&fit=crop" },
 
     // Rooms Section
     { key: "rooms_title", section: "Rooms", label: "Rooms Section Title", type: "text", value: "Sanctuaries of Peace & Privacy" },
     { key: "rooms_subtitle", section: "Rooms", label: "Rooms Subtitle", type: "textarea", value: "Each retreat is designed for the discerning traveler seeking refined comfort." },
-    { key: "rooms_hero_image", section: "Rooms", label: "Rooms Hero Image", type: "image", value: "/images/rooms-hero.jpg" },
+    { key: "rooms_hero_image", section: "Rooms", label: "Rooms Hero Image", type: "image", value: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=1920&auto=format&fit=crop" },
 
     // Contact
     { key: "contact_phone", section: "Contact", label: "Phone Number", type: "text", value: "+1 (888) 123-4567" },
@@ -47,6 +47,23 @@ export async function GET() {
         if (content.length === 0) {
             await SiteContent.insertMany(DEFAULTS);
             content = await SiteContent.find().sort({ section: 1, key: 1 });
+        } else {
+            // Migrate any stale local /images/ paths to the Unsplash defaults
+            const defaultsMap = Object.fromEntries(DEFAULTS.map(d => [d.key, d.value]));
+            const staleDocs = content.filter(
+                c => c.type === "image" && typeof c.value === "string" && c.value.startsWith("/images/")
+            );
+            if (staleDocs.length > 0) {
+                await SiteContent.bulkWrite(
+                    staleDocs.map(doc => ({
+                        updateOne: {
+                            filter: { key: doc.key },
+                            update: { value: defaultsMap[doc.key] ?? doc.value },
+                        },
+                    }))
+                );
+                content = await SiteContent.find().sort({ section: 1, key: 1 });
+            }
         }
 
         return NextResponse.json(content);
