@@ -17,7 +17,7 @@ const OfferSchema = new Schema<IOffer>(
         validUntil: { type: Date, required: true },
         code: { type: String, required: true, unique: true },
         discount: { type: String, required: true },
-        image: { type: String, required: true },
+        image: { type: String, default: "" },
         isActive: { type: Boolean, default: true },
     },
     { timestamps: true }
