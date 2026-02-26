@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
     LayoutDashboard, UtensilsCrossed, CalendarCheck, Bed,
-    ImageIcon, MessageSquare, LogOut, ChefHat, Settings, FileText, CalendarRange
+    ImageIcon, MessageSquare, LogOut, ChefHat, Settings, FileText, CalendarRange,
+    Compass, Tag, Waves
 } from "lucide-react";
 
 const navItems = [
@@ -15,6 +16,9 @@ const navItems = [
     { href: "/reservations", label: "Reservations", icon: CalendarCheck },
     { href: "/availability", label: "Availability", icon: CalendarRange },
     { href: "/gallery", label: "Gallery", icon: ImageIcon },
+    { href: "/experiences", label: "Experiences", icon: Compass },
+    { href: "/offers", label: "Special Offers", icon: Tag },
+    { href: "/spa", label: "Spa Treatments", icon: Waves },
     { href: "/inquiries", label: "Inquiries", icon: MessageSquare },
     { href: "/content", label: "Site Content", icon: FileText },
     { href: "/settings", label: "Settings", icon: Settings },
